@@ -123,17 +123,85 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResp) => {
         const cfg = await new Promise(res=>chrome.storage.local.get(['facepp_key','facepp_secret','use_facepp'], res));
         const useFace = !!cfg.use_facepp && cfg.facepp_key && cfg.facepp_secret;
 
-        // process each profile: fetch image base64 and optional Face++
+        // process each profile by navigating into the profile page, scraping full data there,
+        // then returning to the list. This helps capture full profile info and ensure images
+        // are fetched from the profile page context (reducing CORS issues).
+        async function waitForTabComplete(tabId, timeout=20000){
+          return await new Promise(resolve=>{
+            const start = Date.now();
+            const listener = (id, info) => {
+              if(id === tabId && info.status === 'complete'){
+                chrome.tabs.onUpdated.removeListener(listener);
+                resolve(true);
+              }
+
+            chrome.tabs.onUpdated.addListener(listener);
+            // fallback timeout
+            setTimeout(()=>{
+              try{ chrome.tabs.onUpdated.removeListener(listener); }catch(e){}
+              resolve(false);
+            }, timeout);
+          });
+        }
+
+        // For each profile URL, navigate the active tab to that URL, wait for load,
+        // inject the `profile-scraper.js` which exposes `window.__romeo_profile_scraper`,
+        // then call it to get detailed profile data including in-page base64 image when possible.
         for(let i=0;i<profiles.length;i++){
           const p = profiles[i];
           chrome.runtime.sendMessage({type:'progress', text:`Processing ${i+1}/${profiles.length}: ${p.name || p.profileUrl}`});
-          p.image_base64 = await fetchImageAsBase64(p.image);
-          if(useFace && p.image_base64){
-            const faceRes = await callFacePP(cfg.facepp_key, cfg.facepp_secret, p.image_base64);
-            p.facepp = faceRes;
+          if(!p.profileUrl) continue;
+
+          // navigate active tab to profile URL
+          try{
+            await chrome.tabs.update(tab.id, {url: p.profileUrl});
+          }catch(e){}
+          // wait for navigation
+          await waitForTabComplete(tab.id, 20000);
+
+          // inject scraper helper file (attaches async function to window)
+          try{
+            await chrome.scripting.executeScript({target:{tabId: tab.id}, files:['profile-scraper.js']});
+          }catch(e){}
+
+          // call the exposed scraper function
+          let profileData = null;
+          try{
+            const res = await chrome.scripting.executeScript({
+              target:{tabId: tab.id},
+              func: () => {
+                if(window.__romeo_profile_scraper){
+                  return window.__romeo_profile_scraper();
+                }
+                return null;
+              }
+            });
+            if(res && res[0] && res[0].result) profileData = res[0].result;
+          }catch(e){ profileData = null; }
+
+          // merge results
+          if(profileData){
+            p.name = profileData.name || p.name || '';
+            p.bio = profileData.bio || p.bio || '';
+            p.extra = p.extra || '';
+            p.image = profileData.image || p.image || '';
+            p.image_base64 = profileData.image_base64 || '';
+            if(!p.image_base64 && p.image){
+              p.image_base64 = await fetchImageAsBase64(p.image);
+            }
+            if(useFace && p.image_base64){
+              const faceRes = await callFacePP(cfg.facepp_key, cfg.facepp_secret, p.image_base64);
+              p.facepp = faceRes;
+            }
+          } else {
+            // fallback to previous behavior
+            p.image_base64 = await fetchImageAsBase64(p.image);
+            if(useFace && p.image_base64){
+              const faceRes = await callFacePP(cfg.facepp_key, cfg.facepp_secret, p.image_base64);
+              p.facepp = faceRes;
+            }
           }
         }
-
         // build CSV
         const headers = ['id','name','bio','extra','profileUrl','image_base64','facepp_json'];
         const rows = [headers.map(csvEscape).join(',')];
