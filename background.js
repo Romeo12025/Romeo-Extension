@@ -145,10 +145,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResp) => {
         const csv = rows.join('\n');
 
         // download CSV as file
+        // Note: `URL.createObjectURL` is not available in MV3 service workers in some contexts.
+        // Convert blob to base64 data URL instead and pass that to chrome.downloads.download.
         const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-        const url = URL.createObjectURL(blob);
-        await chrome.downloads.download({url, filename: 'romeo_nearby_export.csv', saveAs: true});
-        setTimeout(()=>URL.revokeObjectURL(url), 10000);
+        const csvBase64 = await blobToBase64(blob); // returns base64 string
+        const dataUrl = 'data:text/csv;charset=utf-8;base64,' + csvBase64;
+        await chrome.downloads.download({url: dataUrl, filename: 'romeo_nearby_export.csv', saveAs: true});
 
         chrome.runtime.sendMessage({type:'done', text:`Export finished (${profiles.length} rows).`});
       }catch(e){
