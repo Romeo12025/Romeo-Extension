@@ -31,6 +31,9 @@
     function q(sel){ return document.querySelector(sel); }
     function textOf(sel){ const n = q(sel); return n ? n.textContent.trim() : ''; }
 
+    // small delay to allow dynamic content to render before we read fields
+    await new Promise(r=>setTimeout(r, 800));
+
     function extractLabelValue(label){
       // Find a <p> whose text equals the label, then read the nearby value
       const ps = Array.from(document.querySelectorAll('p'));

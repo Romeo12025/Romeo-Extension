@@ -3,7 +3,7 @@
 // tile in the Nearby list, wait for the profile view to render, run the page scraper,
 // then go back and continue. Returns an array of profile data.
 (function(){
-  function waitFor(fn, timeout=20000, interval=200){
+  function waitFor(fn, timeout=30000, interval=500){
     return new Promise((resolve, reject)=>{
       const start = Date.now();
       (function poll(){
@@ -22,7 +22,8 @@
 
   window.__romeo_run_click_automation = async function(opts){
     opts = opts || {};
-    const delay = typeof opts.delay === 'number' ? opts.delay : 1000;
+    // default delay between profile navigations (ms). Increased to reduce race conditions.
+    const delay = typeof opts.delay === 'number' ? opts.delay : 3000;
     const maxProfiles = typeof opts.maxProfiles === 'number' && opts.maxProfiles>0 ? opts.maxProfiles : Infinity;
 
     const container = document.querySelector('#profiles.search-results.js-refreshable, #profiles') || document;
@@ -45,7 +46,7 @@
         a.click();
 
         // Wait for profile view: either URL contains /profile/ or a DOM element that looks like a profile
-        const profileLoaded = await waitFor(()=> location.href.includes('/profile/') || !!document.querySelector('h1') || !!document.querySelector('[data-testid="profile"]'), 15000, 300);
+        const profileLoaded = await waitFor(()=> location.href.includes('/profile/') || !!document.querySelector('h1') || !!document.querySelector('[data-testid="profile"]'), 30000, 500);
         if(!profileLoaded){
           // try small delay and continue
           await new Promise(r=>setTimeout(r, 1000));
@@ -72,7 +73,7 @@
         // go back to the list
         try{ history.back(); }catch(e){ }
         // wait until URL returns to previous or list container is visible
-        await waitFor(()=> location.href === prevHref || !!document.querySelector('#profiles') || !!document.querySelector('[data-testid="search-results"]'), 15000, 300);
+        await waitFor(()=> location.href === prevHref || !!document.querySelector('#profiles') || !!document.querySelector('[data-testid="search-results"]'), 30000, 500);
 
         // short delay between items
         await new Promise(r=>setTimeout(r, delay));
