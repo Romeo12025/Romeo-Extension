@@ -31,6 +31,24 @@
     function q(sel){ return document.querySelector(sel); }
     function textOf(sel){ const n = q(sel); return n ? n.textContent.trim() : ''; }
 
+    function extractLabelValue(label){
+      // Find a <p> whose text equals the label, then read the nearby value
+      const ps = Array.from(document.querySelectorAll('p'));
+      const lab = ps.find(p=>p.textContent && p.textContent.trim() === label);
+      if(!lab) return '';
+      const parent = lab.parentElement;
+      if(!parent) return '';
+      // value often sits in a sibling div -> p
+      const val = parent.querySelector('div p') || parent.querySelector('p');
+      if(val && val !== lab) return val.textContent.trim();
+      // try nextSibling
+      if(parent.nextElementSibling){
+        const v2 = parent.nextElementSibling.querySelector('p');
+        if(v2) return v2.textContent.trim();
+      }
+      return '';
+    }
+
     const data = {};
     // try common name selectors
     data.name = textOf('h1') || textOf('h2') || textOf('.sc-fewm29-2.loIzXZ') || '';
@@ -59,6 +77,20 @@
     // try to get more metadata from aria-label or meta tags
     const aria = document.querySelector('[aria-label]') ? (document.querySelector('[aria-label]').getAttribute('aria-label')||'') : '';
     if(aria && !data.bio) data.bio = aria;
+
+    // Extract labeled fields (Age, Height, Weight, Body Type, Body Hair, Languages, Relationship)
+    data.age = extractLabelValue('Age') || '';
+    data.height = extractLabelValue('Height') || '';
+    data.weight = extractLabelValue('Weight') || '';
+    data.body_type = extractLabelValue('Body Type') || '';
+    data.body_hair = extractLabelValue('Body Hair') || '';
+    data.languages = extractLabelValue('Languages') || '';
+    data.relationship = extractLabelValue('Relationship') || '';
+    // convenience flags for some languages
+    const langsLower = (data.languages || '').toLowerCase();
+    data.english = langsLower.includes('english') ? 'yes' : '';
+    data.bengali = langsLower.includes('bengali') ? 'yes' : '';
+    data.hindi = langsLower.includes('hindi') ? 'yes' : '';
 
     // Try to get image base64 in-page (safer for same-origin)
     data.image_base64 = '';

@@ -16,11 +16,29 @@ function csvEscape(val){
 }
 
 async function buildAndDownloadCSV(profiles, filename='romeo_nearby_export.csv'){
-  const headers = ['id','name','bio','extra','profileUrl','image_base64','facepp_json'];
+  const headers = ['id','name','username','bio','age','height','weight','body_type','body_hair','languages','english','bengali','hindi','relationship','profileUrl','image_base64','facepp_json'];
   const rows = [headers.map(csvEscape).join(',')];
   profiles.forEach(p => {
     const faceJson = p.facepp ? JSON.stringify(p.facepp).replace(/\n/g,'') : '';
-    const row = [p.id, p.name, p.bio, p.extra, p.profileUrl, p.image_base64, faceJson].map(csvEscape).join(',');
+    const row = [
+      p.id,
+      p.name || '',
+      p.username || '',
+      p.bio || '',
+      p.age || '',
+      p.height || '',
+      p.weight || '',
+      p.body_type || '',
+      p.body_hair || '',
+      p.languages || '',
+      p.english || '',
+      p.bengali || '',
+      p.hindi || '',
+      p.relationship || '',
+      p.profileUrl || '',
+      p.image_base64 || '',
+      faceJson
+    ].map(csvEscape).join(',');
     rows.push(row);
   });
   const csv = rows.join('\n');
@@ -211,24 +229,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResp) => {
             p.facepp = faceRes;
           }
         }
-        // build CSV
-        const headers = ['id','name','bio','extra','profileUrl','image_base64','facepp_json'];
-        const rows = [headers.map(csvEscape).join(',')];
-        profiles.forEach(p => {
-          const faceJson = p.facepp ? JSON.stringify(p.facepp).replace(/\n/g,'') : '';
-          const row = [p.id, p.name, p.bio, p.extra, p.profileUrl, p.image_base64, faceJson].map(csvEscape).join(',');
-          rows.push(row);
-        });
-        const csv = rows.join('\n');
-
-        // download CSV as file
-        // Note: `URL.createObjectURL` is not available in MV3 service workers in some contexts.
-        // Convert blob to base64 data URL instead and pass that to chrome.downloads.download.
-        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
-        const csvBase64 = await blobToBase64(blob); // returns base64 string
-        const dataUrl = 'data:text/csv;charset=utf-8;base64,' + csvBase64;
-        await chrome.downloads.download({url: dataUrl, filename: 'romeo_nearby_export.csv', saveAs: true});
-
+        // build and download CSV with extended fields
+        await buildAndDownloadCSV(profiles, 'romeo_nearby_export.csv');
         chrome.runtime.sendMessage({type:'done', text:`Export finished (${profiles.length} rows).`});
       }catch(e){
         chrome.runtime.sendMessage({type:'error', text: String(e)});
