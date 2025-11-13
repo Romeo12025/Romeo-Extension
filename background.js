@@ -16,16 +16,19 @@ function csvEscape(val){
 }
 
 async function buildAndDownloadCSV(profiles, filename='romeo_nearby_export.csv'){
-  const headers = ['id','name','username','bio','age','height','weight','body_type','body_hair','languages','english','bengali','hindi','relationship','profileUrl','image_base64','facepp_json'];
+  const headers = ['id','profile_id','name','username','bio','location','age','age_range','height','weight','body_type','body_hair','languages','english','bengali','hindi','relationship','position','dick','safer_sex','open_to','member_since','profileUrl','image_base64','facepp_json'];
   const rows = [headers.map(csvEscape).join(',')];
   profiles.forEach(p => {
     const faceJson = p.facepp ? JSON.stringify(p.facepp).replace(/\n/g,'') : '';
     const row = [
       p.id,
+      p.profile_id || '',
       p.name || '',
       p.username || '',
       p.bio || '',
+      p.location || '',
       p.age || '',
+      p.age_range || '',
       p.height || '',
       p.weight || '',
       p.body_type || '',
@@ -35,6 +38,11 @@ async function buildAndDownloadCSV(profiles, filename='romeo_nearby_export.csv')
       p.bengali || '',
       p.hindi || '',
       p.relationship || '',
+      p.position || '',
+      p.dick || '',
+      p.safer_sex || '',
+      p.open_to || '',
+      p.member_since || '',
       p.profileUrl || '',
       p.image_base64 || '',
       faceJson
@@ -207,7 +215,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResp) => {
             args: [{delay: 3000, maxProfiles: 0, previewDelay: 2500}]
           });
           if(autoRes && autoRes[0] && Array.isArray(autoRes[0].result) && autoRes[0].result.length > 0){
-            profiles = autoRes[0].result.map((p, idx)=>({ id: idx+1, name: p.name||'', bio: p.bio||'', extra: p.extra||'', image: p.image||'', profileUrl: p.profileUrl||'', image_base64: p.image_base64||'', facepp: p.facepp||null }));
+              profiles = autoRes[0].result.map((p, idx) => ({ id: idx + 1, ...p }));
           }
         }catch(e){
           // if automation fails, fall back to previous per-profile navigation behavior

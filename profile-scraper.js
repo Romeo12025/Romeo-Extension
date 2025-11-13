@@ -137,6 +137,33 @@
       }catch(e){ data.image_base64 = ''; }
     }
 
+    // Additional fields from Sexual / Looking For / header
+    data.location = trySelectors(['.profile__info .cmLITB', '.BodyText-sc-1lb5dia-0.cmLITB', '.profile__info .BodyText-sc-1lb5dia-0']) || '';
+
+    // Sexual section (details:nth-child(2))
+    data.position = trySelectors(['div.below-fold section .reactView > div > details:nth-child(2) > div > div:nth-child(1) .dWRtPT']) || extractLabelValue('Position') || '';
+    data.dick = trySelectors(['div.below-fold section .reactView > div > details:nth-child(2) > div > div:nth-child(2) .dWRtPT']) || extractLabelValue('Dick') || '';
+    data.safer_sex = trySelectors(['div.below-fold section .reactView > div > details:nth-child(2) > div > div:nth-child(3) .dWRtPT']) || extractLabelValue('Safer sex') || '';
+
+    // Looking For (details:nth-child(3))
+    data.open_to = trySelectors(['div.below-fold section .reactView > div > details:nth-child(3) > div > div:nth-child(1) .dWRtPT']) || extractLabelValue('Open to') || '';
+    data.age_range = trySelectors(['div.below-fold section .reactView > div > details:nth-child(3) > div > div:nth-child(2) .dWRtPT']) || extractLabelValue('Age range') || '';
+
+    // Member since and Profile ID (single paragraph with <br>)
+    try{
+      const memEl = document.querySelector('section.sc-mtxjf3-0.eMUZzW') || document.querySelector('.sc-mtxjf3-0.eMUZzW');
+      if(memEl){
+        const txt = memEl.textContent || '';
+        const m1 = txt.match(/Member since:\s*([^\n\r<]+)/i);
+        const m2 = txt.match(/Profile ID:\s*(\d+)/i);
+        data.member_since = m1 ? m1[1].trim() : '';
+        data.profile_id = m2 ? m2[1].trim() : '';
+      } else {
+        data.member_since = extractLabelValue('Member since') || '';
+        data.profile_id = extractLabelValue('Profile ID') || '';
+      }
+    }catch(e){ data.member_since = ''; data.profile_id = ''; }
+
     return data;
   }
 
