@@ -204,7 +204,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResp) => {
               }
               return null;
             },
-            args: [{delay: 3000, maxProfiles: 0}]
+            args: [{delay: 3000, maxProfiles: 0, previewDelay: 2500}]
           });
           if(autoRes && autoRes[0] && Array.isArray(autoRes[0].result) && autoRes[0].result.length > 0){
             profiles = autoRes[0].result.map((p, idx)=>({ id: idx+1, name: p.name||'', bio: p.bio||'', extra: p.extra||'', image: p.image||'', profileUrl: p.profileUrl||'', image_base64: p.image_base64||'', facepp: p.facepp||null }));

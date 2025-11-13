@@ -24,6 +24,8 @@
     opts = opts || {};
     // default delay between profile navigations (ms). Increased to reduce race conditions.
     const delay = typeof opts.delay === 'number' ? opts.delay : 3000;
+    // delay after clicking the profile picture to allow details to render (ms)
+    const previewDelay = typeof opts.previewDelay === 'number' ? opts.previewDelay : 2500;
     const maxProfiles = typeof opts.maxProfiles === 'number' && opts.maxProfiles>0 ? opts.maxProfiles : Infinity;
 
     const container = document.querySelector('#profiles.search-results.js-refreshable, #profiles') || document;
@@ -52,8 +54,17 @@
           await new Promise(r=>setTimeout(r, 1000));
         }
 
-        // give site time to render
-        await new Promise(r=>setTimeout(r, 500));
+        // attempt to click the profile picture to reveal full details, then wait
+        try{
+          const picAnchor = document.querySelector('a.js-slideshow-link, a.image--cover, .image--cover, a.js-link-preview');
+          if(picAnchor){
+            try{ picAnchor.click(); }catch(e){}
+            await new Promise(r=>setTimeout(r, previewDelay));
+          }else{
+            // small pause if no picture anchor
+            await new Promise(r=>setTimeout(r, 600));
+          }
+        }catch(e){}
 
         // run the page scraper if available
         let profileData = null;
@@ -70,14 +81,25 @@
 
         results.push(profileData || {profileUrl: location.href});
 
-        // go back to the list
-        try{ history.back(); }catch(e){ }
-        // wait until URL returns to previous or list container is visible
+        // try to click the 'next' control to move to the next profile in preview if present
+        const nextLink = document.querySelector('.js-link--next, a.js-link--next, .preview__link--next');
+        if(nextLink){
+          try{ nextLink.click(); }catch(e){}
+          // wait for preview to update: either URL or main preview image changes
+          await waitFor(()=> location.href.includes('/profile/') && !!document.querySelector('.js-image--next, .preview__image') , 30000, 500);
+          // short delay before next iteration
+          await new Promise(r=>setTimeout(r, delay));
+          // re-collect anchors in case DOM changed (infinite scroll etc.)
+          const newAnchors = Array.from(container.querySelectorAll('a[aria-label][href*="/profile/"]'));
+          if(newAnchors.length > 0) anchors = newAnchors;
+          if(window.__romeo_automation_cancel) break;
+          continue; // move to next loop iteration without history.back()
+        }
+
+        // if no next link, go back to the list view and continue
+        try{ history.back(); }catch(e){}
         await waitFor(()=> location.href === prevHref || !!document.querySelector('#profiles') || !!document.querySelector('[data-testid="search-results"]'), 30000, 500);
-
-        // short delay between items
         await new Promise(r=>setTimeout(r, delay));
-
         // re-collect anchors in case DOM changed (infinite scroll etc.)
         const newAnchors = Array.from(container.querySelectorAll('a[aria-label][href*="/profile/"]'));
         if(newAnchors.length > 0) anchors = newAnchors;
