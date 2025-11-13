@@ -53,20 +53,43 @@
     }
 
     const data = {};
-    // try common name selectors
-    data.name = textOf('h1') || textOf('h2') || textOf('.sc-fewm29-2.loIzXZ') || '';
-    data.username = (location.pathname.match(/profile\/(.*?)\//) || [])[1] || '';
+    // helper to try multiple selectors
+    function getTextSelectors(list){
+      for(const s of list){
+        const el = document.querySelector(s);
+        if(el && el.textContent && el.textContent.trim()) return el.textContent.trim();
+      }
+      return '';
+    }
+
+    function getProfileId(){
+      const selectors = [
+        'header .sc-rcepan-2.jZxKik p',
+        '.sc-rcepan-2.jZxKik p',
+        'h1 p',
+        '.eeZNnP'
+      ];
+      return getTextSelectors(selectors);
+    }
+
+    // id / display name
+    data.id = getProfileId() || '';
+    // name: prefer H1 or the id if present
+    data.name = textOf('h1') || textOf('h2') || textOf('.sc-fewm29-2.loIzXZ') || data.id || '';
+    // username from URL (handle profile/<username>/ or profile/<username>)
+    data.username = (location.pathname.match(/profile\/(.*?)\//) || location.pathname.match(/profile\/(.*)$/) || [])[1] || '';
     data.profileUrl = location.href;
 
-    // bio / about
-    data.bio = textOf('.about') || textOf('.user-bio') || textOf('.profile-about') || '';
+    // bio / about (various possible selectors)
+    data.bio = textOf('.about') || textOf('.user-bio') || textOf('.profile-about') || getTextSelectors(['.profile__info .eeZNnP', '.BodyText-sc-1lb5dia-0.eeZNnP']) || '';
 
-    // attempt to find image: background-image or img
+    // attempt to find image: background or img
     let imageUrl = '';
-    const bgEl = Array.from(document.querySelectorAll('[style]')).find(el=> (el.getAttribute('style')||'').includes('background-image'));
+    const styled = Array.from(document.querySelectorAll('[style]'));
+    const bgEl = styled.find(el=> (el.getAttribute('style')||'').match(/url\(/i));
     if(bgEl){
       const style = bgEl.getAttribute('style') || '';
-      const m = style.match(/background-image:\s*url\((?:\"|\')?(.*?)(?:\"|\')?\)/i);
+      const m = style.match(/url\((?:\"|\')?(.*?)(?:\"|\')?\)/i);
       if(m && m[1]) imageUrl = m[1];
     }
     if(!imageUrl){
