@@ -105,13 +105,24 @@
     if(aria && !data.bio) data.bio = aria;
 
     // Extract labeled fields (Age, Height, Weight, Body Type, Body Hair, Languages, Relationship)
-    data.age = extractLabelValue('Age') || '';
-    data.height = extractLabelValue('Height') || '';
-    data.weight = extractLabelValue('Weight') || '';
-    data.body_type = extractLabelValue('Body Type') || '';
-    data.body_hair = extractLabelValue('Body Hair') || '';
-    data.languages = extractLabelValue('Languages') || '';
-    data.relationship = extractLabelValue('Relationship') || '';
+    // Try specific selectors first (generalized to avoid fixed profile id), then fallback to label search
+    function trySelectors(list){
+      for(const s of list){
+        try{
+          const el = document.querySelector(s);
+          if(el && el.textContent && el.textContent.trim()) return el.textContent.trim();
+        }catch(e){}
+      }
+      return '';
+    }
+
+    data.age = trySelectors(['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(1) .dWRtPT']) || extractLabelValue('Age') || '';
+    data.height = trySelectors(['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(2) .dWRtPT']) || extractLabelValue('Height') || '';
+    data.weight = trySelectors(['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(3) .dWRtPT']) || extractLabelValue('Weight') || '';
+    data.body_type = trySelectors(['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(4) .dWRtPT']) || extractLabelValue('Body Type') || '';
+    data.body_hair = trySelectors(['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(5) .dWRtPT']) || extractLabelValue('Body Hair') || '';
+    data.languages = trySelectors(['div.below-fold section .reactView > div > details:nth-child(1) > div > div .dWRtPT']) || extractLabelValue('Languages') || '';
+    data.relationship = trySelectors(['div.below-fold section .reactView > div > details:nth-child(1) > div > div .dWRtPT']) || extractLabelValue('Relationship') || '';
     // convenience flags for some languages
     const langsLower = (data.languages || '').toLowerCase();
     data.english = langsLower.includes('english') ? 'yes' : '';
@@ -195,11 +206,12 @@
       'name': ['h1','h2','.sc-fewm29-2.loIzXZ'],
       'username': [],
       'bio': ['.profile__info .eeZNnP','.BodyText-sc-1lb5dia-0.eeZNnP','.about','.user-bio','.profile-about'],
-      'age': ['Age'],
-      'height': ['Height'],
-      'weight': ['Weight'],
-      'body_type': ['Body Type'],
-      'body_hair': ['Body Hair'],
+      // prefer specific below-fold selectors (generalized without a fixed profile id)
+      'age': ['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(1) .dWRtPT', 'Age'],
+      'height': ['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(2) .dWRtPT', 'Height'],
+      'weight': ['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(3) .dWRtPT', 'Weight'],
+      'body_type': ['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(4) .dWRtPT', 'Body Type'],
+      'body_hair': ['div.below-fold section .reactView > div > details:nth-child(1) > div > div:nth-child(5) .dWRtPT', 'Body Hair'],
       'languages': ['Languages'],
       'relationship': ['Relationship']
     };
