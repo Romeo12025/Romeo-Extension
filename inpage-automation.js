@@ -16,6 +16,10 @@
     });
   }
 
+  // cancellation flag set on window to stop the automation
+  window.__romeo_automation_cancel = false;
+  window.__romeo_cancel_automation = function(){ window.__romeo_automation_cancel = true; };
+
   window.__romeo_run_click_automation = async function(opts){
     opts = opts || {};
     const delay = typeof opts.delay === 'number' ? opts.delay : 1000;
@@ -32,6 +36,7 @@
 
     const results = [];
     for(let i=0;i<anchors.length;i++){
+      if(window.__romeo_automation_cancel) break;
       const a = anchors[i];
       try{
         const prevHref = location.href;
@@ -75,6 +80,8 @@
         // re-collect anchors in case DOM changed (infinite scroll etc.)
         const newAnchors = Array.from(container.querySelectorAll('a[aria-label][href*="/profile/"]'));
         if(newAnchors.length > 0) anchors = newAnchors;
+
+        if(window.__romeo_automation_cancel) break;
 
       }catch(e){
         // ignore and continue

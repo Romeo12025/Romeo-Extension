@@ -15,6 +15,21 @@ function csvEscape(val){
   return '"' + s + '"';
 }
 
+async function buildAndDownloadCSV(profiles, filename='romeo_nearby_export.csv'){
+  const headers = ['id','name','bio','extra','profileUrl','image_base64','facepp_json'];
+  const rows = [headers.map(csvEscape).join(',')];
+  profiles.forEach(p => {
+    const faceJson = p.facepp ? JSON.stringify(p.facepp).replace(/\n/g,'') : '';
+    const row = [p.id, p.name, p.bio, p.extra, p.profileUrl, p.image_base64, faceJson].map(csvEscape).join(',');
+    rows.push(row);
+  });
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const csvBase64 = await blobToBase64(blob);
+  const dataUrl = 'data:text/csv;charset=utf-8;base64,' + csvBase64;
+  await chrome.downloads.download({url: dataUrl, filename, saveAs: true});
+}
+
 async function fetchImageAsBase64(url){
   if(!url) return '';
   try{
@@ -55,6 +70,40 @@ async function callFacePP(key, secret, base64Image){
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResp) => {
+  // handle cancel request from popup
+  if(msg && msg.action === 'cancelScrape'){
+    (async ()=>{
+      try{
+        const [tab] = await chrome.tabs.query({active:true, currentWindow:true});
+        if(tab){
+          try{
+            await chrome.scripting.executeScript({target:{tabId: tab.id}, func: ()=>{ if(window.__romeo_cancel_automation) window.__romeo_cancel_automation(); }});
+          }catch(e){}
+        }
+        chrome.runtime.sendMessage({type:'progress', text:'Cancel signal sent.'});
+      }catch(e){ chrome.runtime.sendMessage({type:'error', text: String(e)}); }
+    })();
+    return;
+  }
+
+  // handle export request from popup
+  if(msg && msg.action === 'exportCSV'){
+    (async ()=>{
+      try{
+        chrome.storage.local.get(['last_profiles'], async (res)=>{
+          const profiles = res.last_profiles || [];
+          if(!profiles || profiles.length === 0){
+            chrome.runtime.sendMessage({type:'error', text:'No saved profiles to export.'});
+            return;
+          }
+          await buildAndDownloadCSV(profiles);
+          chrome.runtime.sendMessage({type:'done', text:`Export finished (${profiles.length} rows).`});
+        });
+      }catch(e){ chrome.runtime.sendMessage({type:'error', text: String(e)}); }
+    })();
+    return;
+  }
+
   if(msg && msg.action === 'scrapeNearby'){
     (async ()=>{
       try{
@@ -146,6 +195,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResp) => {
           // if automation fails, fall back to previous per-profile navigation behavior
           console.error('In-page automation failed:', e);
         }
+
+        // Save intermediate results so Export can be triggered separately
+        try{ chrome.storage.local.set({last_profiles: profiles}); }catch(e){}
 
         // Ensure any profiles without image_base64 are processed via background fetch
         for(let i=0;i<profiles.length;i++){

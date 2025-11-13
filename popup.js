@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const scrapeBtn = document.getElementById('scrapeBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const exportBtn = document.getElementById('exportBtn');
   const progress = document.getElementById('progress');
   const keyInput = document.getElementById('facepp_key');
   const secretInput = document.getElementById('facepp_secret');
@@ -25,6 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // initial ack handled by background via messages
       });
     });
+  });
+
+  stopBtn.addEventListener('click', ()=>{
+    progress.textContent = 'Stop requested...';
+    chrome.runtime.sendMessage({action:'cancelScrape'});
+  });
+
+  exportBtn.addEventListener('click', ()=>{
+    progress.textContent = 'Export requested...';
+    chrome.runtime.sendMessage({action:'exportCSV'});
   });
 
   // receive progress updates from background
