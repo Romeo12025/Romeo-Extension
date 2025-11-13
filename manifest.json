@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Romeo Nearby Scraper",
+  "version": "0.1.0",
+  "description": "Scrape Romeo nearby profiles and export CSV with images (base64).",
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "storage",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://*.romeo.com/*",
+    "https://api-us.faceplusplus.com/*",
+    "https://api-cn.faceplusplus.com/*",
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Romeo Nearby Scraper"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
