@@ -131,4 +131,105 @@
 
   // expose the scraper function
   window.__romeo_profile_scraper = scrapeProfile;
+  // Visual helper: highlight detected elements for each field so user can verify selectors
+  function makeOverlay(idLabel, rect){
+    const o = document.createElement('div');
+    o.className = 'romeo-highlight-overlay';
+    o.style.position = 'absolute';
+    o.style.zIndex = 2147483647;
+    o.style.pointerEvents = 'none';
+    o.style.border = '2px solid rgba(255,80,80,0.95)';
+    o.style.background = 'rgba(255,255,255,0.03)';
+    o.style.left = (rect.left + window.scrollX) + 'px';
+    o.style.top = (rect.top + window.scrollY) + 'px';
+    o.style.width = Math.max(6, rect.width) + 'px';
+    o.style.height = Math.max(6, rect.height) + 'px';
+    const label = document.createElement('div');
+    label.textContent = idLabel;
+    label.style.position = 'absolute';
+    label.style.left = '0';
+    label.style.top = '-18px';
+    label.style.background = 'rgba(255,80,80,0.95)';
+    label.style.color = 'white';
+    label.style.fontSize = '12px';
+    label.style.padding = '2px 6px';
+    label.style.borderRadius = '3px';
+    label.style.pointerEvents = 'none';
+    o.appendChild(label);
+    document.body.appendChild(o);
+    return o;
+  }
+
+  let __romeo_overlays = [];
+  function clearOverlays(){
+    try{
+      __romeo_overlays.forEach(n=>n.remove());
+    }catch(e){}
+    __romeo_overlays = [];
+  }
+
+  function findLabelElement(label){
+    const ps = Array.from(document.querySelectorAll('p'));
+    for(const p of ps){
+      if(p.textContent && p.textContent.trim() === label){
+        // parent contains label and value
+        const parent = p.parentElement;
+        if(!parent) return null;
+        const val = parent.querySelector('.cRfmWg p, .dWRtPT, div p');
+        if(val) return val;
+        // try sibling
+        if(parent.nextElementSibling){
+          const v2 = parent.nextElementSibling.querySelector('p');
+          if(v2) return v2;
+        }
+        return p;
+      }
+    }
+    return null;
+  }
+
+  window.__romeo_highlight_fields = function(){
+    clearOverlays();
+    const mapping = {
+      'id': ['header .sc-rcepan-2.jZxKik p', '.sc-rcepan-2.jZxKik p', 'h1 p', '.eeZNnP'],
+      'name': ['h1','h2','.sc-fewm29-2.loIzXZ'],
+      'username': [],
+      'bio': ['.profile__info .eeZNnP','.BodyText-sc-1lb5dia-0.eeZNnP','.about','.user-bio','.profile-about'],
+      'age': ['Age'],
+      'height': ['Height'],
+      'weight': ['Weight'],
+      'body_type': ['Body Type'],
+      'body_hair': ['Body Hair'],
+      'languages': ['Languages'],
+      'relationship': ['Relationship']
+    };
+
+    for(const key of Object.keys(mapping)){
+      let el = null;
+      const sel = mapping[key];
+      if(sel.length > 0){
+        // if entries are labels (like 'Age') then use findLabelElement
+        if(sel[0].match(/^[A-Za-z ]+$/)){
+          el = findLabelElement(sel[0]);
+        } else {
+          for(const s of sel){
+            const e = document.querySelector(s);
+            if(e){ el = e; break; }
+          }
+        }
+      }
+      // special case username: point to header id if available
+      if(key === 'username' && !el){
+        el = document.querySelector('header .sc-rcepan-2.jZxKik p') || document.querySelector('.sc-rcepan-2.jZxKik p');
+      }
+      if(el){
+        const rect = el.getBoundingClientRect();
+        const ov = makeOverlay(key, rect);
+        __romeo_overlays.push(ov);
+      }
+    }
+    return __romeo_overlays.length;
+  };
+
+  window.__romeo_clear_highlights = clearOverlays;
 })();
