@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Romeo Travel Scraper</title>
+    <style>
+      body{font-family: Arial, sans-serif; width:360px; padding:12px}
+      label{display:block;margin-top:8px;font-size:12px}
+      input[type=text]{width:100%;padding:6px;margin-top:4px}
+      button{margin-top:12px;padding:8px 12px}
+      #progress{margin-top:8px;font-size:12px;color:#222}
+      .small{font-size:11px;color:#666}
+    </style>
+  </head>
+  <body>
+    <h3>Romeo Travel Scraper</h3>
+    <div class="small">Open Romeo Travel/Explore tab (grid), then click <b>Scrape Travel</b>.</div>
+
+    <label>Face++ API Key</label>
+    <input id="facepp_key" type="text" placeholder="(optional) api_key"/>
+
+    <label>Face++ API Secret</label>
+    <input id="facepp_secret" type="text" placeholder="(optional) api_secret"/>
+
+    <label><input id="use_facepp" type="checkbox"/> Use Face++ for face attributes</label>
+
+    <button id="scrapeBtn">Scrape Travel</button>
+    <button id="stopBtn" style="margin-left:8px;">Stop</button>
+    <button id="exportBtn" style="margin-left:8px;">Export CSV</button>
+    <div id="progress"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
